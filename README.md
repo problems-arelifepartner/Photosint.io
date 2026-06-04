@@ -18,7 +18,7 @@ Make sure you have [Anaconda](https://www.anaconda.com/download) or [Miniconda](
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/SecurePay-Shield.git](https://github.com/YOUR_USERNAME/SecurePay-Shield.git)
+git clone https://github.com/problems-arelifepartner/SecurePay-Shield
 cd SecurePay-Shield
 
 
