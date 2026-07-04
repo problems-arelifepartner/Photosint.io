@@ -3,29 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photosint.io - Deep OSINT Media Suite</title>
+    <title>Photosint.io - Forensic Suite & Stegano Injector</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen antialiased">
 
-    <div class="max-w-6xl mx-auto px-4 py-12">
+    <div class="max-w-7xl mx-auto px-4 py-12">
         <header class="text-center mb-12">
-            <span class="px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Client-Side Forensic Sandbox</span>
-            <h1 class="text-4xl font-extrabold tracking-tight mt-3 mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+            <span class="px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Client-Side Deployment Sandbox</span>
+            <h1 class="text-4xl font-extrabold tracking-tight mt-3 mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Photosint.io
             </h1>
             <p class="text-slate-400 text-sm max-w-xl mx-auto">
-                Advanced browser forensic extraction. Performs local binary header mining and pixel payload scanning with zero server footprint.
+                Advanced browser forensic suite. Analyze tracking telemetry headers or inject custom steganographic payloads locally.
             </p>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <div class="space-y-6">
+            <div class="lg:col-span-4 space-y-6">
                 <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
                     <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
-                        <span>📥</span> Media Input
+                        <span>📥</span> Target Media Input
                     </h2>
                     
                     <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-blue-500/50 bg-slate-950 p-8 rounded-xl text-center cursor-pointer transition-all duration-200">
@@ -46,13 +46,15 @@
                 </div>
             </div>
 
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                    <h2 class="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
-                        <span>⚙️</span> Real-Time Analytics
-                    </h2>
+            <div class="lg:col-span-8 space-y-6">
+                
+                <div class="flex border-b border-slate-800 gap-4 text-sm font-medium">
+                    <button id="tabAnalyzeBtn" class="border-b-2 border-blue-500 pb-3 text-blue-400 font-bold px-1">🔍 Forensic Analysis</button>
+                    <button id="tabInjectBtn" class="border-b-2 border-transparent pb-3 text-slate-400 hover:text-slate-200 px-1">💉 Inject Payload</button>
+                </div>
 
-                    <div class="space-y-4">
+                <div id="panelAnalyze" class="space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
                         <div class="p-4 bg-slate-950 rounded-xl border border-slate-800/60">
                             <h3 class="text-sm font-bold text-blue-400 flex items-center gap-2 mb-3">
                                 📊 Device & Ballistic Fingerprints
@@ -79,8 +81,27 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
+                <div id="panelInject" class="space-y-4 hidden">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                        <div class="p-4 bg-slate-950 rounded-xl border border-slate-800/60 space-y-4">
+                            <h3 class="text-sm font-bold text-purple-400 flex items-center gap-2">
+                                📝 Embed Custom Binary Text Payload
+                            </h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Enter your secret message below. The engine will modify the lowest-order bit of each pixel color container from the uploaded base image to encode the string.
+                            </p>
+                            
+                            <textarea id="payloadText" rows="3" placeholder="Type secret payload here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500" disabled></textarea>
+                            
+                            <button id="generatePayloadBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs tracking-wider uppercase shadow transition content-center disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                                Compile & Download Encoded PNG
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
