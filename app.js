@@ -6,6 +6,36 @@ const previewContainer = document.getElementById('previewContainer');
 const perfMeter = document.getElementById('perfMeter');
 const msVal = document.getElementById('msVal');
 
+// Tab Configuration Panels
+const tabAnalyzeBtn = document.getElementById('tabAnalyzeBtn');
+const tabInjectBtn = document.getElementById('tabInjectBtn');
+const panelAnalyze = document.getElementById('panelAnalyze');
+const panelInject = document.getElementById('panelInject');
+
+// Encoder Interface Hooks
+const payloadText = document.getElementById('payloadText');
+const generatePayloadBtn = document.getElementById('generatePayloadBtn');
+
+let globalLoadedImage = null; // Stores target reference for active injection loops
+
+// Tab Interaction Handlers
+tabAnalyzeBtn.addEventListener('click', () => switchTab('analyze'));
+tabInjectBtn.addEventListener('click', () => switchTab('inject'));
+
+function switchTab(mode) {
+    if (mode === 'analyze') {
+        tabAnalyzeBtn.className = "border-b-2 border-blue-500 pb-3 text-blue-400 font-bold px-1";
+        tabInjectBtn.className = "border-b-2 border-transparent pb-3 text-slate-400 hover:text-slate-200 px-1";
+        panelAnalyze.classList.remove('hidden');
+        panelInject.classList.add('hidden');
+    } else {
+        tabInjectBtn.className = "border-b-2 border-purple-500 pb-3 text-purple-400 font-bold px-1";
+        tabAnalyzeBtn.className = "border-b-2 border-transparent pb-3 text-slate-400 hover:text-slate-200 px-1";
+        panelInject.classList.remove('hidden');
+        panelAnalyze.classList.add('hidden');
+    }
+}
+
 // Event Triggers for Drag & Drop Functionality
 dropzone.addEventListener('click', () => imageInput.click());
 dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-blue-500', 'bg-blue-950/20'); });
@@ -25,8 +55,6 @@ function processMediaFile(file) {
     }
 
     const initialTime = performance.now();
-    
-    // Memory Pointer creation for real-time local rendering
     const objectURL = URL.createObjectURL(file);
     preview.src = objectURL;
     previewContainer.classList.remove('hidden');
@@ -34,8 +62,14 @@ function processMediaFile(file) {
     const imageElement = new Image();
     imageElement.src = objectURL;
     imageElement.onload = function() {
+        globalLoadedImage = imageElement; // Cache reference for injection module
+        
+        // Unlock encoding interface options
+        payloadText.disabled = false;
+        generatePayloadBtn.disabled = false;
+
         runBitwiseSteganalysis(imageElement);
-        URL.revokeObjectURL(objectURL); // Free browser active runtime memory allocation
+        URL.revokeObjectURL(objectURL); 
         
         const finalTime = performance.now();
         msVal.innerText = Math.round(finalTime - initialTime);
@@ -51,8 +85,6 @@ function processMediaFile(file) {
         const deviceModel = EXIF.getTag(this, "Model") || "Not Found";
         const dateCaptured = EXIF.getTag(this, "DateTime") || "Not Found";
         const softwareApplied = EXIF.getTag(this, "Software") || "Not Found";
-        
-        // Deep target structural mining definitions
         const profile = EXIF.getTag(this, "InteroperabilityIndex") || "None Checked";
         const uniqueID = EXIF.getTag(this, "ImageUniqueID") || "None Gen-1";
 
@@ -60,7 +92,7 @@ function processMediaFile(file) {
         if (deviceMake === "Not Found" && deviceModel === "Not Found") {
             diagnosticNote = `
                 <div class="sm:col-span-2 text-amber-500 text-[11px] mt-2 border border-amber-900/30 bg-amber-950/10 p-2 rounded leading-relaxed">
-                    ⚠️ <strong>Forensic Notice:</strong> Binary headers are completely blank. This confirms meta serialization metadata scrubbed during transmission (e.g., shared via messaging apps, social networks, or captured as a local screenshot).
+                    ⚠️ <strong>Forensic Notice:</strong> Binary headers are blank. This suggests image distribution compression (e.g., download via WhatsApp or a local device screenshot).
                 </div>
             `;
         }
@@ -96,7 +128,6 @@ function processMediaFile(file) {
     });
 }
 
-// Convert GPS Data Arrays to Decimal Coordinates
 function convertRationalToDecimal(coordinateArray, coordinateRef) {
     let deg = coordinateArray[0].numerator / coordinateArray[0].denominator;
     let min = coordinateArray[1].numerator / coordinateArray[1].denominator;
@@ -116,16 +147,16 @@ function runBitwiseSteganalysis(img) {
     const pixelDataArray = canvasContext.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height).data;
     let currentBitString = "";
     let accumulatedText = "";
-    const analysisLimit = Math.min(pixelDataArray.length, 120000); // UI performance gate
+    const analysisLimit = Math.min(pixelDataArray.length, 120000); 
 
     for (let i = 0; i < analysisLimit; i++) {
-        if ((i + 1) % 4 === 0) continue; // Ignore Alpha channel bits
+        if ((i + 1) % 4 === 0) continue; 
 
         currentBitString += (pixelDataArray[i] & 1);
 
         if (currentBitString.length === 8) {
             const characterCode = parseInt(currentBitString, 2);
-            if (characterCode === 0) break; // Break execution if string terminator code hit
+            if (characterCode === 0) break; 
             
             if (characterCode >= 32 && characterCode <= 126) {
                 accumulatedText += String.fromCharCode(characterCode);
@@ -144,6 +175,60 @@ function runBitwiseSteganalysis(img) {
         stegoOutputDiv.innerText = "No readable standard text found encoded in the lower bitplanes.";
     }
 }
+
+// --- NEW OPERATION: LSB ENCODER MACHINE ---
+generatePayloadBtn.addEventListener('click', () => {
+    if (!globalLoadedImage) return;
+
+    const messageToHide = payloadText.value;
+    if (!messageToHide) {
+        alert("Payload processing rejected: Text buffer cannot be empty.");
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = globalLoadedImage.width;
+    canvas.height = globalLoadedImage.height;
+    ctx.drawImage(globalLoadedImage, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    // Convert string to binary array with a terminating null character (\0)
+    let binaryPayload = "";
+    for (let i = 0; i < messageToHide.length; i++) {
+        let binChar = messageToHide.charCodeAt(i).toString(2);
+        binaryPayload += "0".repeat(8 - binChar.length) + binChar;
+    }
+    binaryPayload += "00000000"; // Stop sign flag for the decoder loop
+
+    if (binaryPayload.length > (data.length * 0.75)) {
+        alert("Payload volume overflow: Message string size is too large for this image dimensions.");
+        return;
+    }
+
+    let payloadBitIndex = 0;
+    for (let i = 0; i < data.length; i++) {
+        if ((i + 1) % 4 === 0) continue; // Skip transparency bytes
+
+        if (payloadBitIndex < binaryPayload.length) {
+            // Force replace the lowest bit with our payload bit sequence
+            data[i] = (data[i] & 0xFE) | parseInt(binaryPayload[payloadBitIndex], 10);
+            payloadBitIndex++;
+        } else {
+            break;
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    // Prompt immediate programmatic download container save as lossless PNG format
+    const link = document.createElement('a');
+    link.download = 'photosint_stego_payload.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+});
 
 // XSS Sanitizer Helper
 function sanitizeHTML(str) {
