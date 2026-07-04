@@ -16,7 +16,8 @@ const panelInject = document.getElementById('panelInject');
 const payloadText = document.getElementById('payloadText');
 const generatePayloadBtn = document.getElementById('generatePayloadBtn');
 
-let globalLoadedImage = null; // Stores target reference for active injection loops
+let globalLoadedImage = null; // Stores image object reference for encoding
+let currentFileName = "unknown_file";
 
 // Tab Interaction Handlers
 tabAnalyzeBtn.addEventListener('click', () => switchTab('analyze'));
@@ -43,11 +44,38 @@ dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('border
 dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('border-blue-500', 'bg-blue-950/20');
-    if (e.dataTransfer.files.length) processMediaFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) {
+        currentFileName = e.dataTransfer.files[0].name;
+        processMediaFile(e.dataTransfer.files[0]);
+    }
 });
-imageInput.addEventListener('change', (e) => { if (e.target.files.length) processMediaFile(e.target.files[0]); });
+imageInput.addEventListener('change', (e) => { 
+    if (e.target.files.length) {
+        currentFileName = e.target.files[0].name;
+        processMediaFile(e.target.files[0]);
+    }
+});
 
-// Central Execution Pipeline
+// Secure On-Screen Session Logger
+function logSessionEvent(action, targetName) {
+    const logBox = document.getElementById('localHistoryLog');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    if (logBox.innerHTML.includes('No actions recorded')) {
+        logBox.innerHTML = '';
+    }
+    
+    const entry = document.createElement('div');
+    entry.className = "border-b border-slate-900 pb-1 mb-1 last:border-0 last:pb-0 last:mb-0 flex justify-between gap-2 text-[11px]";
+    entry.innerHTML = `
+        <span class="text-slate-500">[${timestamp}]</span>
+        <span class="text-purple-400 font-bold max-w-[100px] truncate">${sanitizeHTML(action)}</span>
+        <span class="text-slate-400 truncate max-w-[140px] text-right">${sanitizeHTML(targetName)}</span>
+    `;
+    logBox.insertBefore(entry, logBox.firstChild);
+}
+
+// Central Processing Execution Pipeline
 function processMediaFile(file) {
     if (!file.type.startsWith('image/')) {
         alert('Validation Failure: Input must be a structural image format.');
@@ -62,13 +90,15 @@ function processMediaFile(file) {
     const imageElement = new Image();
     imageElement.src = objectURL;
     imageElement.onload = function() {
-        globalLoadedImage = imageElement; // Cache reference for injection module
+        globalLoadedImage = imageElement; 
         
-        // Unlock encoding interface options
+        // Unlock encoding controls
         payloadText.disabled = false;
+        payloadText.placeholder = "Type custom secret message to embed here...";
         generatePayloadBtn.disabled = false;
 
         runBitwiseSteganalysis(imageElement);
+        logSessionEvent("FILE_ANALYZE", currentFileName);
         URL.revokeObjectURL(objectURL); 
         
         const finalTime = performance.now();
@@ -92,7 +122,7 @@ function processMediaFile(file) {
         if (deviceMake === "Not Found" && deviceModel === "Not Found") {
             diagnosticNote = `
                 <div class="sm:col-span-2 text-amber-500 text-[11px] mt-2 border border-amber-900/30 bg-amber-950/10 p-2 rounded leading-relaxed">
-                    ⚠️ <strong>Forensic Notice:</strong> Binary headers are blank. This suggests image distribution compression (e.g., download via WhatsApp or a local device screenshot).
+                    ⚠️ <strong>Forensic Notice:</strong> Binary headers are blank. This suggests image distribution compression (e.g., shared via messaging apps, social networks, or captured as a local screenshot).
                 </div>
             `;
         }
@@ -118,7 +148,7 @@ function processMediaFile(file) {
             gpsDiv.innerHTML = `
                 <div class="text-emerald-400 font-bold mb-1">✓ Coordinates Extracted Successfully</div>
                 <span class="text-slate-300">${calculatedLat.toFixed(6)}, ${calculatedLon.toFixed(6)}</span>
-                <a href="https://www.google.com/maps?q=${calculatedLat},${calculatedLon}" target="_blank" class="block text-xs text-blue-400 underline mt-2 hover:text-blue-300">
+                <a href="https://maps.google.com/?q=${calculatedLat},${calculatedLon}" target="_blank" class="block text-xs text-blue-400 underline mt-2 hover:text-blue-300">
                     Open Coordinates in Google Maps External Target ↗
                 </a>
             `;
@@ -200,7 +230,7 @@ generatePayloadBtn.addEventListener('click', () => {
         let binChar = messageToHide.charCodeAt(i).toString(2);
         binaryPayload += "0".repeat(8 - binChar.length) + binChar;
     }
-    binaryPayload += "00000000"; 
+    binaryPayload += "00000000"; // Null terminator block
 
     if (binaryPayload.length > (data.length * 0.75)) {
         alert("Payload volume overflow: Message string size is too large for this image dimensions.");
@@ -221,10 +251,13 @@ generatePayloadBtn.addEventListener('click', () => {
 
     ctx.putImageData(imgData, 0, 0);
 
+    // Prompt immediate download as a lossless PNG
     const link = document.createElement('a');
     link.download = 'photosint_stego_payload.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
+    
+    logSessionEvent("STEGO_GEN", "stego_payload.png");
 });
 
 // XSS Sanitizer Helper
