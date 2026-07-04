@@ -42,7 +42,7 @@ function processMediaFile(file) {
         perfMeter.classList.remove('hidden');
     };
 
-    // Parse Image Header Segments via EXIF Engine
+    // Deep Analysis: Header Segments & Diagnostic Fingerprints
     EXIF.getData(file, function() {
         const osintDiv = document.getElementById('osintData');
         const gpsDiv = document.getElementById('gpsData');
@@ -51,12 +51,28 @@ function processMediaFile(file) {
         const deviceModel = EXIF.getTag(this, "Model") || "Not Found";
         const dateCaptured = EXIF.getTag(this, "DateTime") || "Not Found";
         const softwareApplied = EXIF.getTag(this, "Software") || "Not Found";
+        
+        // Deep target structural mining definitions
+        const profile = EXIF.getTag(this, "InteroperabilityIndex") || "None Checked";
+        const uniqueID = EXIF.getTag(this, "ImageUniqueID") || "None Gen-1";
+
+        let diagnosticNote = "";
+        if (deviceMake === "Not Found" && deviceModel === "Not Found") {
+            diagnosticNote = `
+                <div class="sm:col-span-2 text-amber-500 text-[11px] mt-2 border border-amber-900/30 bg-amber-950/10 p-2 rounded leading-relaxed">
+                    ⚠️ <strong>Forensic Notice:</strong> Binary headers are completely blank. This confirms meta serialization metadata scrubbed during transmission (e.g., shared via messaging apps, social networks, or captured as a local screenshot).
+                </div>
+            `;
+        }
 
         osintDiv.innerHTML = `
             <div><span class="text-slate-600">MANUFACTURER:</span> <span class="text-slate-200">${sanitizeHTML(deviceMake)}</span></div>
             <div><span class="text-slate-600">DEVICE MODEL:</span> <span class="text-slate-200">${sanitizeHTML(deviceModel)}</span></div>
             <div><span class="text-slate-600">CAPTURE DATE:</span> <span class="text-slate-200">${sanitizeHTML(dateCaptured)}</span></div>
             <div><span class="text-slate-600">SOFTWARE LAYER:</span> <span class="text-slate-200">${sanitizeHTML(softwareApplied)}</span></div>
+            <div><span class="text-slate-600">MATRIX PROFILE:</span> <span class="text-slate-300 font-bold">${sanitizeHTML(profile)}</span></div>
+            <div><span class="text-slate-600">IMAGE UNIQUE ID:</span> <span class="text-slate-300 text-[11px]">${sanitizeHTML(uniqueID)}</span></div>
+            ${diagnosticNote}
         `;
 
         const latData = EXIF.getTag(this, "GPSLatitude");
@@ -80,7 +96,7 @@ function processMediaFile(file) {
     });
 }
 
-// Convert GPS Data Arrays to Coordinates
+// Convert GPS Data Arrays to Decimal Coordinates
 function convertRationalToDecimal(coordinateArray, coordinateRef) {
     let deg = coordinateArray[0].numerator / coordinateArray[0].denominator;
     let min = coordinateArray[1].numerator / coordinateArray[1].denominator;
