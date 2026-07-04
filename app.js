@@ -1,4 +1,4 @@
-// DOM Element Registry
+// Register Interface Selectors
 const dropzone = document.getElementById('dropzone');
 const imageInput = document.getElementById('imageInput');
 const preview = document.getElementById('preview');
@@ -6,132 +6,130 @@ const previewContainer = document.getElementById('previewContainer');
 const perfMeter = document.getElementById('perfMeter');
 const msVal = document.getElementById('msVal');
 
-// Setup Drag & Drop Handlers for Ease of Use
+// Event Triggers for Drag & Drop Functionality
 dropzone.addEventListener('click', () => imageInput.click());
 dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-blue-500', 'bg-blue-950/20'); });
 dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('border-blue-500', 'bg-blue-950/20'); });
 dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('border-blue-500', 'bg-blue-950/20');
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) processMediaFile(e.dataTransfer.files[0]);
 });
-imageInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+imageInput.addEventListener('change', (e) => { if (e.target.files.length) processMediaFile(e.target.files[0]); });
 
-// Central Processing Engine
-function handleFile(file) {
+// Central Execution Pipeline
+function processMediaFile(file) {
     if (!file.type.startsWith('image/')) {
-        alert('Security Alert: Target file must be a valid image container.');
+        alert('Validation Failure: Input must be a structural image format.');
         return;
     }
 
-    const startTime = performance.now();
+    const initialTime = performance.now();
     
-    // Create ObjectURL - faster than FileReader base64 execution
+    // Memory Pointer creation for real-time local rendering
     const objectURL = URL.createObjectURL(file);
     preview.src = objectURL;
     previewContainer.classList.remove('hidden');
 
-    const img = new Image();
-    img.src = objectURL;
-    img.onload = function() {
-        executeSteganalysis(img);
-        // Clean up memory payload allocation
-        URL.revokeObjectURL(objectURL);
+    const imageElement = new Image();
+    imageElement.src = objectURL;
+    imageElement.onload = function() {
+        runBitwiseSteganalysis(imageElement);
+        URL.revokeObjectURL(objectURL); // Free browser active runtime memory allocation
         
-        // Track response time metrics
-        const endTime = performance.now();
-        msVal.innerText = Math.round(endTime - startTime);
+        const finalTime = performance.now();
+        msVal.innerText = Math.round(finalTime - initialTime);
         perfMeter.classList.remove('hidden');
     };
 
-    // Fast Header Processing via EXIF Pipeline
+    // Parse Image Header Segments via EXIF Engine
     EXIF.getData(file, function() {
         const osintDiv = document.getElementById('osintData');
         const gpsDiv = document.getElementById('gpsData');
 
-        const make = EXIF.getTag(this, "Make") || "N/A";
-        const model = EXIF.getTag(this, "Model") || "N/A";
-        const date = EXIF.getTag(this, "DateTime") || "N/A";
-        const software = EXIF.getTag(this, "Software") || "N/A";
+        const deviceMake = EXIF.getTag(this, "Make") || "Not Found";
+        const deviceModel = EXIF.getTag(this, "Model") || "Not Found";
+        const dateCaptured = EXIF.getTag(this, "DateTime") || "Not Found";
+        const softwareApplied = EXIF.getTag(this, "Software") || "Not Found";
 
         osintDiv.innerHTML = `
-            <div><span class="text-slate-600">MANUFACTURER:</span> <span class="text-slate-200">${escapeHtml(make)}</span></div>
-            <div><span class="text-slate-600">DEVICE MODEL:</span> <span class="text-slate-200">${escapeHtml(model)}</span></div>
-            <div><span class="text-slate-600">CAPTURE DATE:</span> <span class="text-slate-200">${escapeHtml(date)}</span></div>
-            <div><span class="text-slate-600">SOFTWARE REF:</span> <span class="text-slate-200">${escapeHtml(software)}</span></div>
+            <div><span class="text-slate-600">MANUFACTURER:</span> <span class="text-slate-200">${sanitizeHTML(deviceMake)}</span></div>
+            <div><span class="text-slate-600">DEVICE MODEL:</span> <span class="text-slate-200">${sanitizeHTML(deviceModel)}</span></div>
+            <div><span class="text-slate-600">CAPTURE DATE:</span> <span class="text-slate-200">${sanitizeHTML(dateCaptured)}</span></div>
+            <div><span class="text-slate-600">SOFTWARE LAYER:</span> <span class="text-slate-200">${sanitizeHTML(softwareApplied)}</span></div>
         `;
 
-        const lat = EXIF.getTag(this, "GPSLatitude");
+        const latData = EXIF.getTag(this, "GPSLatitude");
         const latRef = EXIF.getTag(this, "GPSLatitudeRef");
-        const lon = EXIF.getTag(this, "GPSLongitude");
+        const lonData = EXIF.getTag(this, "GPSLongitude");
         const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
 
-        if (lat && lon) {
-            const latDec = parseGpsRational(lat, latRef);
-            const lonDec = parseGpsRational(lon, lonRef);
+        if (latData && lonData) {
+            const calculatedLat = convertRationalToDecimal(latData, latRef);
+            const calculatedLon = convertRationalToDecimal(lonData, lonRef);
             gpsDiv.innerHTML = `
-                <div class="text-emerald-400 font-bold mb-1">✓ Coordinates Extracted</div>
-                <span class="text-slate-300">${latDec.toFixed(6)}, ${lonDec.toFixed(6)}</span>
-                <a href="https://www.google.com/maps?q=${latDec},${lonDec}" target="_blank" class="block text-xs text-blue-400 underline mt-2 hover:text-blue-300">
-                    Map Link Generator ↗
+                <div class="text-emerald-400 font-bold mb-1">✓ Coordinates Extracted Successfully</div>
+                <span class="text-slate-300">${calculatedLat.toFixed(6)}, ${calculatedLon.toFixed(6)}</span>
+                <a href="https://www.google.com/maps?q=${calculatedLat},${calculatedLon}" target="_blank" class="block text-xs text-blue-400 underline mt-2 hover:text-blue-300">
+                    Open Coordinates in Google Maps External Target ↗
                 </a>
             `;
         } else {
-            gpsDiv.innerHTML = `<span class="text-slate-600">No geographic metadata array tags located.</span>`;
+            gpsDiv.innerHTML = `<span class="text-slate-600">No geo-position coordinates embedded in this container.</span>`;
         }
     });
 }
 
-// Convert GPS Data Structs
-function parseGpsRational(coord, ref) {
-    let d = coord[0].numerator / coord[0].denominator;
-    let m = coord[1].numerator / coord[1].denominator;
-    let s = coord[2].numerator / coord[2].denominator;
-    let decimal = d + (m / 60) + (s / 3600);
-    return (ref === "S" || ref === "W") ? -decimal : decimal;
+// Convert GPS Data Arrays to Coordinates
+function convertRationalToDecimal(coordinateArray, coordinateRef) {
+    let deg = coordinateArray[0].numerator / coordinateArray[0].denominator;
+    let min = coordinateArray[1].numerator / coordinateArray[1].denominator;
+    let sec = coordinateArray[2].numerator / coordinateArray[2].denominator;
+    let decimalDegrees = deg + (min / 60) + (sec / 3600);
+    return (coordinateRef === "S" || coordinateRef === "W") ? -decimalDegrees : decimalDegrees;
 }
 
-// High-Speed Steganalysis (Scan first 120,000 components maximum for UI safety)
-function executeSteganalysis(img) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
+// Scan Pixels for LSB Steganographic Content
+function runBitwiseSteganalysis(img) {
+    const hiddenCanvas = document.createElement('canvas');
+    const canvasContext = hiddenCanvas.getContext('2d');
+    hiddenCanvas.width = img.width;
+    hiddenCanvas.height = img.height;
+    canvasContext.drawImage(img, 0, 0);
 
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let bitString = "";
-    let decodedOutput = "";
-    const executionBound = Math.min(data.length, 120000);
+    const pixelDataArray = canvasContext.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height).data;
+    let currentBitString = "";
+    let accumulatedText = "";
+    const analysisLimit = Math.min(pixelDataArray.length, 120000); // UI performance gate
 
-    for (let i = 0; i < executionBound; i++) {
-        if ((i + 1) % 4 === 0) continue; // Bypass Alpha configuration byte
+    for (let i = 0; i < analysisLimit; i++) {
+        if ((i + 1) % 4 === 0) continue; // Ignore Alpha channel bits
 
-        bitString += (data[i] & 1);
+        currentBitString += (pixelDataArray[i] & 1);
 
-        if (bitString.length === 8) {
-            const characterCode = parseInt(bitString, 2);
-            if (characterCode === 0) break; // Terminate execution block on null stop byte
+        if (currentBitString.length === 8) {
+            const characterCode = parseInt(currentBitString, 2);
+            if (characterCode === 0) break; // Break execution if string terminator code hit
             
             if (characterCode >= 32 && characterCode <= 126) {
-                decodedOutput += String.fromCharCode(characterCode);
+                accumulatedText += String.fromCharCode(characterCode);
             }
-            bitString = "";
+            currentBitString = "";
         }
-        if (decodedOutput.length > 300) break;
+        if (accumulatedText.length > 300) break;
     }
 
-    const stegoDiv = document.getElementById('stegoData');
-    if (decodedOutput.trim().length > 2) {
-        stegoDiv.className = "text-xs font-mono text-emerald-400 bg-emerald-950/20 p-3 rounded-lg border border-emerald-900/40 whitespace-pre-wrap break-all";
-        stegoDiv.innerText = `[Payload Cracked]\n"${decodedOutput}"`;
+    const stegoOutputDiv = document.getElementById('stegoData');
+    if (accumulatedText.trim().length > 2) {
+        stegoOutputDiv.className = "text-xs font-mono text-emerald-400 bg-emerald-950/20 p-3 rounded-lg border border-emerald-900/40 whitespace-pre-wrap break-all";
+        stegoOutputDiv.innerText = `[Payload Decoded]\n"${accumulatedText}"`;
     } else {
-        stegoDiv.className = "text-xs font-mono text-slate-500 bg-black/40 p-3 rounded-lg border border-slate-900";
-        stegoDiv.innerText = "No clean text matches verified within standard bit boundaries.";
+        stegoOutputDiv.className = "text-xs font-mono text-slate-500 bg-black/40 p-3 rounded-lg border border-slate-900";
+        stegoOutputDiv.innerText = "No readable standard text found encoded in the lower bitplanes.";
     }
 }
 
-// Security Helper: Protect HTML Context rendering against script injection vectors
-function escapeHtml(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// XSS Sanitizer Helper
+function sanitizeHTML(str) {
+    return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"');
 }
