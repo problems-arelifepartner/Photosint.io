@@ -1,116 +1,137 @@
-document.getElementById('imageInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+// DOM Element Registry
+const dropzone = document.getElementById('dropzone');
+const imageInput = document.getElementById('imageInput');
+const preview = document.getElementById('preview');
+const previewContainer = document.getElementById('previewContainer');
+const perfMeter = document.getElementById('perfMeter');
+const msVal = document.getElementById('msVal');
 
-    // Show Image Preview
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        const preview = document.getElementById('preview');
-        preview.src = event.target.result;
-        preview.classList.remove('hidden');
+// Setup Drag & Drop Handlers for Ease of Use
+dropzone.addEventListener('click', () => imageInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-blue-500', 'bg-blue-950/20'); });
+dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('border-blue-500', 'bg-blue-950/20'); });
+dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('border-blue-500', 'bg-blue-950/20');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+imageInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+// Central Processing Engine
+function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+        alert('Security Alert: Target file must be a valid image container.');
+        return;
+    }
+
+    const startTime = performance.now();
+    
+    // Create ObjectURL - faster than FileReader base64 execution
+    const objectURL = URL.createObjectURL(file);
+    preview.src = objectURL;
+    previewContainer.classList.remove('hidden');
+
+    const img = new Image();
+    img.src = objectURL;
+    img.onload = function() {
+        executeSteganalysis(img);
+        // Clean up memory payload allocation
+        URL.revokeObjectURL(objectURL);
         
-        // Trigger Steganography Detection once image is loaded into canvas
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = function() {
-            decodeLSB(img);
-        };
+        // Track response time metrics
+        const endTime = performance.now();
+        msVal.innerText = Math.round(endTime - startTime);
+        perfMeter.classList.remove('hidden');
     };
-    reader.readAsDataURL(file);
 
-    // --- OSINT / EXIF EXTRACTION ---
+    // Fast Header Processing via EXIF Pipeline
     EXIF.getData(file, function() {
         const osintDiv = document.getElementById('osintData');
         const gpsDiv = document.getElementById('gpsData');
 
-        // Extract metadata attributes
-        const make = EXIF.getTag(this, "Make") || "Unknown";
-        const model = EXIF.getTag(this, "Model") || "Unknown";
-        const date = EXIF.getTag(this, "DateTime") || "Unknown";
-        const software = EXIF.getTag(this, "Software") || "None detected";
+        const make = EXIF.getTag(this, "Make") || "N/A";
+        const model = EXIF.getTag(this, "Model") || "N/A";
+        const date = EXIF.getTag(this, "DateTime") || "N/A";
+        const software = EXIF.getTag(this, "Software") || "N/A";
 
         osintDiv.innerHTML = `
-            <p><strong>📷 Manufacturer:</strong> ${make}</p>
-            <p><strong>📱 Model:</strong> ${model}</p>
-            <p><strong>📅 Captured On:</strong> ${date}</p>
-            <p><strong>💻 Software Signature:</strong> ${software}</p>
+            <div><span class="text-slate-600">MANUFACTURER:</span> <span class="text-slate-200">${escapeHtml(make)}</span></div>
+            <div><span class="text-slate-600">DEVICE MODEL:</span> <span class="text-slate-200">${escapeHtml(model)}</span></div>
+            <div><span class="text-slate-600">CAPTURE DATE:</span> <span class="text-slate-200">${escapeHtml(date)}</span></div>
+            <div><span class="text-slate-600">SOFTWARE REF:</span> <span class="text-slate-200">${escapeHtml(software)}</span></div>
         `;
 
-        // Extract GPS Coordinates
         const lat = EXIF.getTag(this, "GPSLatitude");
         const latRef = EXIF.getTag(this, "GPSLatitudeRef");
         const lon = EXIF.getTag(this, "GPSLongitude");
         const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
 
         if (lat && lon) {
-            // Convert EXIF Rational formats to Decimal Degrees
-            const latDec = convertToDecimal(lat, latRef);
-            const lonDec = convertToDecimal(lon, lonRef);
-
+            const latDec = parseGpsRational(lat, latRef);
+            const lonDec = parseGpsRational(lon, lonRef);
             gpsDiv.innerHTML = `
-                <span class="text-emerald-400 font-semibold">📍 Coordinates Found:</span> ${latDec.toFixed(6)}, ${lonDec.toFixed(6)}<br>
-                <a href="https://www.google.com/maps?q=${latDec},${lonDec}" target="_blank" class="text-blue-400 underline mt-2 inline-block">
-                    Open target coordinates in Google Maps →
+                <div class="text-emerald-400 font-bold mb-1">✓ Coordinates Extracted</div>
+                <span class="text-slate-300">${latDec.toFixed(6)}, ${lonDec.toFixed(6)}</span>
+                <a href="https://www.google.com/maps?q=${latDec},${lonDec}" target="_blank" class="block text-xs text-blue-400 underline mt-2 hover:text-blue-300">
+                    Map Link Generator ↗
                 </a>
             `;
         } else {
-            gpsDiv.innerHTML = `<span class="text-gray-500">No geo-tags found embedded in file headers.</span>`;
+            gpsDiv.innerHTML = `<span class="text-slate-600">No geographic metadata array tags located.</span>`;
         }
     });
-});
-
-// Helper: Convert EXIF GPS to Decimal Degrees
-function convertToDecimal(coord, ref) {
-    let degrees = coord[0].numerator / coord[0].denominator;
-    let minutes = coord[1].numerator / coord[1].denominator;
-    let seconds = coord[2].numerator / coord[2].denominator;
-    let decimal = degrees + (minutes / 60) + (seconds / 3600);
-    if (ref === "S" || ref === "W") decimal = -decimal;
-    return decimal;
 }
 
-// --- STEGANOGRAPHY DECODER (Extracts Hidden Text from Binary Pixels) ---
-function decodeLSB(img) {
+// Convert GPS Data Structs
+function parseGpsRational(coord, ref) {
+    let d = coord[0].numerator / coord[0].denominator;
+    let m = coord[1].numerator / coord[1].denominator;
+    let s = coord[2].numerator / coord[2].denominator;
+    let decimal = d + (m / 60) + (s / 3600);
+    return (ref === "S" || ref === "W") ? -decimal : decimal;
+}
+
+// High-Speed Steganalysis (Scan first 120,000 components maximum for UI safety)
+function executeSteganalysis(img) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = img.width;
     canvas.height = img.height;
     ctx.drawImage(img, 0, 0);
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data; // Flat array containing Red, Green, Blue, Alpha bytes
-    
-    let binaryMessage = "";
-    let extractedText = "";
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let bitString = "";
+    let decodedOutput = "";
+    const executionBound = Math.min(data.length, 120000);
 
-    // Iterate through the red, green, and blue channels of pixels to pick up the 0th bit
-    for (let i = 0; i < data.length; i++) {
-        if ((i + 1) % 4 === 0) continue; // Skip the Alpha channel bit entirely
-        
-        binaryMessage += (data[i] & 1); // Get the Lowest Significant Bit
+    for (let i = 0; i < executionBound; i++) {
+        if ((i + 1) % 4 === 0) continue; // Bypass Alpha configuration byte
 
-        if (binaryMessage.length === 8) {
-            const charCode = parseInt(binaryMessage, 2);
+        bitString += (data[i] & 1);
+
+        if (bitString.length === 8) {
+            const characterCode = parseInt(bitString, 2);
+            if (characterCode === 0) break; // Terminate execution block on null stop byte
             
-            // Stop parsing if we hit a null terminator byte (Standard end-of-string indicator)
-            if (charCode === 0) break; 
-            
-            // Filter printable characters
-            if (charCode >= 32 && charCode <= 126) {
-                extractedText += String.fromCharCode(charCode);
+            if (characterCode >= 32 && characterCode <= 126) {
+                decodedOutput += String.fromCharCode(characterCode);
             }
-            binaryMessage = ""; // Reset for next character block
+            bitString = "";
         }
-        
-        // Fail-safe limit so browser loops don't lock up on huge images
-        if (extractedText.length > 500) break;
+        if (decodedOutput.length > 300) break;
     }
 
     const stegoDiv = document.getElementById('stegoData');
-    if (extractedText.trim().length > 2) {
-        stegoDiv.innerHTML = `<span class="text-green-400 font-bold">🔓 Hidden Content Cracked:</span>\n"${extractedText}"`;
+    if (decodedOutput.trim().length > 2) {
+        stegoDiv.className = "text-xs font-mono text-emerald-400 bg-emerald-950/20 p-3 rounded-lg border border-emerald-900/40 whitespace-pre-wrap break-all";
+        stegoDiv.innerText = `[Payload Cracked]\n"${decodedOutput}"`;
     } else {
-        stegoDiv.innerText = "No hidden standard LSB text markers flagged in the pixel array payload.";
+        stegoDiv.className = "text-xs font-mono text-slate-500 bg-black/40 p-3 rounded-lg border border-slate-900";
+        stegoDiv.innerText = "No clean text matches verified within standard bit boundaries.";
     }
 }
 
+// Security Helper: Protect HTML Context rendering against script injection vectors
+function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
