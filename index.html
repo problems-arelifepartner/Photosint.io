@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photosint.io - Forensic Suite & Stegano Injector</title>
+    <title>Photosint.io - Forensic Console & Stegano Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen antialiased">
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-purple-500/30">
 
     <div class="max-w-7xl mx-auto px-4 py-12">
         <header class="text-center mb-12">
-            <span class="px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Client-Side Deployment Sandbox</span>
+            <span class="px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Sandboxed Terminal Environment</span>
             <h1 class="text-4xl font-extrabold tracking-tight mt-3 mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Photosint.io
             </h1>
             <p class="text-slate-400 text-sm max-w-xl mx-auto">
-                Advanced browser forensic suite. Analyze tracking telemetry headers or inject custom steganographic payloads locally.
+                Advanced browser forensic suite. Monitor file operations and payload array changes via the low-level virtual terminal.
             </p>
         </header>
 
@@ -47,10 +47,11 @@
 
                 <div class="p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
                     <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2 mb-3">
-                        <span>📜</span> Session Action History
+                        <span>👁️</span> Pixel Array Payload Monitor
                     </h2>
-                    <div id="localHistoryLog" class="space-y-2 text-xs font-mono text-slate-400 max-h-48 overflow-y-auto bg-slate-950 p-3 rounded-xl border border-slate-850">
-                        <span class="text-slate-600 italic">No actions recorded in this sandbox session yet.</span>
+                    <p class="text-[11px] text-slate-500 mb-2">Real-time bitplane state mapping of the final 48 bits:</p>
+                    <div id="bitplanePreview" class="bg-slate-950 p-3 rounded-xl border border-slate-850 font-mono text-slate-600 text-xs tracking-wider break-all min-h-[4rem]">
+                        00000000 00000000 00000000 00000000 00000000 00000000
                     </div>
                 </div>
             </div>
@@ -107,6 +108,21 @@
                                 Compile & Download Encoded PNG
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <div class="bg-black border border-slate-800 rounded-2xl shadow-2xl p-4 overflow-hidden font-mono text-xs">
+                    <div class="flex items-center justify-between border-b border-slate-900 pb-2 mb-3 text-slate-500">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500/70 inline-block"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/70 inline-block"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-green-500/70 inline-block"></span>
+                            <span class="ml-2 text-[10px] tracking-wider text-slate-400">forensic-terminal@photosint:~</span>
+                        </div>
+                        <span class="text-[10px]">STDOUT_LIVE</span>
+                    </div>
+                    <div id="terminalScreen" class="space-y-1 h-36 overflow-y-auto scrolling-touch text-emerald-400/90 leading-relaxed">
+                        <div><span class="text-slate-600">[sys_init]</span> Core structural diagnostics online... Ready for media ingestion array.</div>
                     </div>
                 </div>
 
