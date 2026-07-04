@@ -15,8 +15,10 @@ const panelInject = document.getElementById('panelInject');
 // Encoder Interface Hooks
 const payloadText = document.getElementById('payloadText');
 const generatePayloadBtn = document.getElementById('generatePayloadBtn');
+const terminalScreen = document.getElementById('terminalScreen');
+const bitplanePreview = document.getElementById('bitplanePreview');
 
-let globalLoadedImage = null; // Stores image object reference for encoding
+let globalLoadedImage = null; 
 let currentFileName = "unknown_file";
 
 // Tab Interaction Handlers
@@ -29,12 +31,24 @@ function switchTab(mode) {
         tabInjectBtn.className = "border-b-2 border-transparent pb-3 text-slate-400 hover:text-slate-200 px-1";
         panelAnalyze.classList.remove('hidden');
         panelInject.classList.add('hidden');
+        writeToTerminal("ui_state", "Switched panel interface context to: FORENSIC_DECODER");
     } else {
         tabInjectBtn.className = "border-b-2 border-purple-500 pb-3 text-purple-400 font-bold px-1";
         tabAnalyzeBtn.className = "border-b-2 border-transparent pb-3 text-slate-400 hover:text-slate-200 px-1";
         panelInject.classList.remove('hidden');
         panelAnalyze.classList.add('hidden');
+        writeToTerminal("ui_state", "Switched panel interface context to: INJECT_PAYLOAD_MATRIX");
     }
+}
+
+// Low-Level Virtual Terminal Pipeline
+function writeToTerminal(tag, message, colorClass = "text-emerald-400/90") {
+    const timestamp = new Date().toISOString().substr(11, 8);
+    const line = document.createElement('div');
+    line.className = colorClass;
+    line.innerHTML = `<span class="text-slate-600">[${timestamp}] [${sanitizeHTML(tag)}]</span> ${sanitizeHTML(message)}`;
+    terminalScreen.appendChild(line);
+    terminalScreen.scrollTop = terminalScreen.scrollHeight;
 }
 
 // Event Triggers for Drag & Drop Functionality
@@ -56,32 +70,15 @@ imageInput.addEventListener('change', (e) => {
     }
 });
 
-// Secure On-Screen Session Logger
-function logSessionEvent(action, targetName) {
-    const logBox = document.getElementById('localHistoryLog');
-    const timestamp = new Date().toLocaleTimeString();
-    
-    if (logBox.innerHTML.includes('No actions recorded')) {
-        logBox.innerHTML = '';
-    }
-    
-    const entry = document.createElement('div');
-    entry.className = "border-b border-slate-900 pb-1 mb-1 last:border-0 last:pb-0 last:mb-0 flex justify-between gap-2 text-[11px]";
-    entry.innerHTML = `
-        <span class="text-slate-500">[${timestamp}]</span>
-        <span class="text-purple-400 font-bold max-w-[100px] truncate">${sanitizeHTML(action)}</span>
-        <span class="text-slate-400 truncate max-w-[140px] text-right">${sanitizeHTML(targetName)}</span>
-    `;
-    logBox.insertBefore(entry, logBox.firstChild);
-}
-
-// Central Processing Execution Pipeline
+// Central Ingestion Engine
 function processMediaFile(file) {
     if (!file.type.startsWith('image/')) {
+        writeToTerminal("core_error", "Ingestion aborted: Target context descriptor is not a valid image frame.", "text-red-400 font-bold");
         alert('Validation Failure: Input must be a structural image format.');
         return;
     }
 
+    writeToTerminal("file_io", `Intercepted file handle array allocation: "${file.name}" (${file.size} bytes)`);
     const initialTime = performance.now();
     const objectURL = URL.createObjectURL(file);
     preview.src = objectURL;
@@ -92,21 +89,20 @@ function processMediaFile(file) {
     imageElement.onload = function() {
         globalLoadedImage = imageElement; 
         
-        // Unlock encoding controls
         payloadText.disabled = false;
         payloadText.placeholder = "Type custom secret message to embed here...";
         generatePayloadBtn.disabled = false;
 
         runBitwiseSteganalysis(imageElement);
-        logSessionEvent("FILE_ANALYZE", currentFileName);
         URL.revokeObjectURL(objectURL); 
         
         const finalTime = performance.now();
         msVal.innerText = Math.round(finalTime - initialTime);
         perfMeter.classList.remove('hidden');
+        writeToTerminal("perf_clock", `Image array loaded completely inside sandbox context in ${Math.round(finalTime - initialTime)}ms`);
     };
 
-    // Deep Analysis: Header Segments & Diagnostic Fingerprints
+    // Parse Image Header Segments via EXIF Engine
     EXIF.getData(file, function() {
         const osintDiv = document.getElementById('osintData');
         const gpsDiv = document.getElementById('gpsData');
@@ -118,13 +114,16 @@ function processMediaFile(file) {
         const profile = EXIF.getTag(this, "InteroperabilityIndex") || "None Checked";
         const uniqueID = EXIF.getTag(this, "ImageUniqueID") || "None Gen-1";
 
+        writeToTerminal("exif_miner", `Parsing complete metadata markers. Make: ${deviceMake} | Model: ${deviceModel}`);
+
         let diagnosticNote = "";
         if (deviceMake === "Not Found" && deviceModel === "Not Found") {
             diagnosticNote = `
                 <div class="sm:col-span-2 text-amber-500 text-[11px] mt-2 border border-amber-900/30 bg-amber-950/10 p-2 rounded leading-relaxed">
-                    ⚠️ <strong>Forensic Notice:</strong> Binary headers are blank. This suggests image distribution compression (e.g., shared via messaging apps, social networks, or captured as a local screenshot).
+                    ⚠️ <strong>Forensic Notice:</strong> Binary headers are blank. This suggests image distribution compression (e.g., download via WhatsApp or a local device screenshot).
                 </div>
             `;
+            writeToTerminal("forensic_alert", "Header signatures match compressed distribution profiles (Metadata missing).", "text-amber-400 font-bold");
         }
 
         osintDiv.innerHTML = `
@@ -145,6 +144,7 @@ function processMediaFile(file) {
         if (latData && lonData) {
             const calculatedLat = convertRationalToDecimal(latData, latRef);
             const calculatedLon = convertRationalToDecimal(lonData, lonRef);
+            writeToTerminal("geoint_match", `Found valid tracking coordinate map coordinates: ${calculatedLat}, ${calculatedLon}`, "text-emerald-400 font-bold");
             gpsDiv.innerHTML = `
                 <div class="text-emerald-400 font-bold mb-1">✓ Coordinates Extracted Successfully</div>
                 <span class="text-slate-300">${calculatedLat.toFixed(6)}, ${calculatedLon.toFixed(6)}</span>
@@ -154,6 +154,7 @@ function processMediaFile(file) {
             `;
         } else {
             gpsDiv.innerHTML = `<span class="text-slate-600">No geo-position coordinates embedded in this container.</span>`;
+            writeToTerminal("geoint_scan", "Zero positional coordinate data located in image directory tags.");
         }
     });
 }
@@ -177,12 +178,22 @@ function runBitwiseSteganalysis(img) {
     const pixelDataArray = canvasContext.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height).data;
     let currentBitString = "";
     let accumulatedText = "";
+    let previewBits = "";
     const analysisLimit = Math.min(pixelDataArray.length, 120000); 
+
+    writeToTerminal("stego_scan", `Analyzing pixel matrix bit arrays... Bound threshold set to ${analysisLimit} bytes.`);
 
     for (let i = 0; i < analysisLimit; i++) {
         if ((i + 1) % 4 === 0) continue; 
 
-        currentBitString += (pixelDataArray[i] & 1);
+        const activeBit = (pixelDataArray[i] & 1);
+        currentBitString += activeBit;
+        
+        // Populate display monitor array with first 48 bits analyzed
+        if (previewBits.length < 48) {
+            previewBits += activeBit;
+            if (previewBits.length % 8 === 0) previewBits += " ";
+        }
 
         if (currentBitString.length === 8) {
             const characterCode = parseInt(currentBitString, 2);
@@ -196,13 +207,17 @@ function runBitwiseSteganalysis(img) {
         if (accumulatedText.length > 300) break;
     }
 
+    bitplanePreview.innerText = previewBits;
     const stegoOutputDiv = document.getElementById('stegoData');
+    
     if (accumulatedText.trim().length > 2) {
         stegoOutputDiv.className = "text-xs font-mono text-emerald-400 bg-emerald-950/20 p-3 rounded-lg border border-emerald-900/40 whitespace-pre-wrap break-all";
         stegoOutputDiv.innerText = `[Payload Decoded]\n"${accumulatedText}"`;
+        writeToTerminal("stego_found", `Successfully decoded hidden standard text block payload match: "${accumulatedText.substring(0, 20)}..."`, "text-purple-400 font-bold");
     } else {
         stegoOutputDiv.className = "text-xs font-mono text-slate-500 bg-black/40 p-3 rounded-lg border border-slate-900";
         stegoOutputDiv.innerText = "No readable standard text found encoded in the lower bitplanes.";
+        writeToTerminal("stego_scan", "Bitplane signature scan complete: Clean state verified.");
     }
 }
 
@@ -212,10 +227,12 @@ generatePayloadBtn.addEventListener('click', () => {
 
     const messageToHide = payloadText.value;
     if (!messageToHide) {
+        writeToTerminal("stego_err", "Injection rejected: Missing payload stream content buffer input.", "text-red-400");
         alert("Payload processing rejected: Text buffer cannot be empty.");
         return;
     }
 
+    writeToTerminal("stego_inject", "Initializing payload bitwise injection engine sequence...");
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = globalLoadedImage.width;
@@ -230,19 +247,27 @@ generatePayloadBtn.addEventListener('click', () => {
         let binChar = messageToHide.charCodeAt(i).toString(2);
         binaryPayload += "0".repeat(8 - binChar.length) + binChar;
     }
-    binaryPayload += "00000000"; // Null terminator block
+    binaryPayload += "00000000"; // Null terminator stop sign string array marker
 
     if (binaryPayload.length > (data.length * 0.75)) {
+        writeToTerminal("stego_fail", "Memory exception: Payload array density limits overflow container capacity.", "text-red-500 font-bold");
         alert("Payload volume overflow: Message string size is too large for this image dimensions.");
         return;
     }
 
     let payloadBitIndex = 0;
+    let trackingMonitorBits = "";
+    
     for (let i = 0; i < data.length; i++) {
         if ((i + 1) % 4 === 0) continue; 
 
         if (payloadBitIndex < binaryPayload.length) {
             data[i] = (data[i] & 0xFE) | parseInt(binaryPayload[payloadBitIndex], 10);
+            
+            if (trackingMonitorBits.length < 48) {
+                trackingMonitorBits += binaryPayload[payloadBitIndex];
+                if (trackingMonitorBits.length % 8 === 0) trackingMonitorBits += " ";
+            }
             payloadBitIndex++;
         } else {
             break;
@@ -250,14 +275,17 @@ generatePayloadBtn.addEventListener('click', () => {
     }
 
     ctx.putImageData(imgData, 0, 0);
+    bitplanePreview.className = "bg-purple-950/20 p-3 rounded-xl border border-purple-900/40 font-mono text-purple-400 text-xs tracking-wider break-all min-h-[4rem]";
+    bitplanePreview.innerText = trackingMonitorBits + "... [Payload Latched]";
 
-    // Prompt immediate download as a lossless PNG
+    writeToTerminal("stego_success", `Injected ${binaryPayload.length} bits smoothly into lossless RGBA mapping structure. Packaging data container...`, "text-purple-400 font-bold");
+
+    // Process immediate automatic file download wrapper execution link
     const link = document.createElement('a');
     link.download = 'photosint_stego_payload.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
-    
-    logSessionEvent("STEGO_GEN", "stego_payload.png");
+    writeToTerminal("file_export", "Compiled matrix output package piped directly out to browser download stream: photosint_stego_payload.png");
 });
 
 // XSS Sanitizer Helper
