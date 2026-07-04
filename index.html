@@ -44,6 +44,15 @@
                         <img id="preview" class="w-full rounded-lg border border-slate-800 max-h-64 object-contain bg-slate-950" alt="Target" />
                     </div>
                 </div>
+
+                <div class="p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
+                    <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2 mb-3">
+                        <span>📜</span> Session Action History
+                    </h2>
+                    <div id="localHistoryLog" class="space-y-2 text-xs font-mono text-slate-400 max-h-48 overflow-y-auto bg-slate-950 p-3 rounded-xl border border-slate-850">
+                        <span class="text-slate-600 italic">No actions recorded in this sandbox session yet.</span>
+                    </div>
+                </div>
             </div>
 
             <div class="lg:col-span-8 space-y-6">
@@ -92,7 +101,7 @@
                                 Enter your secret message below. The engine will modify the lowest-order bit of each pixel color container from the uploaded base image to encode the string.
                             </p>
                             
-                            <textarea id="payloadText" rows="3" placeholder="Type secret payload here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500" disabled></textarea>
+                            <textarea id="payloadText" rows="3" placeholder="Upload an image first to enable payload injection input..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500" disabled></textarea>
                             
                             <button id="generatePayloadBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs tracking-wider uppercase shadow transition content-center disabled:opacity-40 disabled:cursor-not-allowed" disabled>
                                 Compile & Download Encoded PNG
