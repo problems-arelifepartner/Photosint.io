@@ -176,7 +176,7 @@ function runBitwiseSteganalysis(img) {
     }
 }
 
-// --- NEW OPERATION: LSB ENCODER MACHINE ---
+// --- LSB ENCODER MACHINE ---
 generatePayloadBtn.addEventListener('click', () => {
     if (!globalLoadedImage) return;
 
@@ -195,13 +195,12 @@ generatePayloadBtn.addEventListener('click', () => {
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imgData.data;
 
-    // Convert string to binary array with a terminating null character (\0)
     let binaryPayload = "";
     for (let i = 0; i < messageToHide.length; i++) {
         let binChar = messageToHide.charCodeAt(i).toString(2);
         binaryPayload += "0".repeat(8 - binChar.length) + binChar;
     }
-    binaryPayload += "00000000"; // Stop sign flag for the decoder loop
+    binaryPayload += "00000000"; 
 
     if (binaryPayload.length > (data.length * 0.75)) {
         alert("Payload volume overflow: Message string size is too large for this image dimensions.");
@@ -210,10 +209,9 @@ generatePayloadBtn.addEventListener('click', () => {
 
     let payloadBitIndex = 0;
     for (let i = 0; i < data.length; i++) {
-        if ((i + 1) % 4 === 0) continue; // Skip transparency bytes
+        if ((i + 1) % 4 === 0) continue; 
 
         if (payloadBitIndex < binaryPayload.length) {
-            // Force replace the lowest bit with our payload bit sequence
             data[i] = (data[i] & 0xFE) | parseInt(binaryPayload[payloadBitIndex], 10);
             payloadBitIndex++;
         } else {
@@ -223,7 +221,6 @@ generatePayloadBtn.addEventListener('click', () => {
 
     ctx.putImageData(imgData, 0, 0);
 
-    // Prompt immediate programmatic download container save as lossless PNG format
     const link = document.createElement('a');
     link.download = 'photosint_stego_payload.png';
     link.href = canvas.toDataURL('image/png');
